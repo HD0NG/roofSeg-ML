@@ -95,7 +95,7 @@ def contrastive_loss(embeddings, labels, margin=1.0):
     return loss / count
 
 # Train PointNet-UNet model
-def train_model(model, train_loader, optimizer, num_epochs=50, device='cuda', save_model=True, directory="model", filename="pointnet_unet_trained.pth"):
+def train_model(model, train_loader, optimizer, num_epochs=50, device='cuda', save_model=True, save_path="model/pointnet_unet_trained.pth"):
     """
     Trains the PointNet-UNet model and visualizes training loss.
 
@@ -134,7 +134,7 @@ def train_model(model, train_loader, optimizer, num_epochs=50, device='cuda', sa
 
     # Save model after training
     if save_model:
-        torch.save(model.state_dict(), os.join(directory, filename))
+        torch.save(model.state_dict(), save_path)
         print("Model saved successfully!")
 
     return loss_history

@@ -37,7 +37,7 @@ model = PointUNet(input_dim=3, emb_dim=128, output_dim=64).to(device)
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 
 # Train and visualize loss
-loss_history = train_model(model, train_loader, optimizer, num_epochs=50, device=device, save_model=True)
+loss_history = train_model(model, train_loader, optimizer, num_epochs=50, device=device, save_model=True, save_path="model/pointnet_unet_checkpoint_100s_50e.pth")
 print("✅ Model trained!")
 
 #save loss history

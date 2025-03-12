@@ -2,3 +2,5 @@
 data/
 results/
 .DS_Store
+__pycache__/
+training.config.js
