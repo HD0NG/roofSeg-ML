@@ -1,4 +1,5 @@
 from PointUNet import *
+import pickle
 
 # Define dataset paths
 points_folder = "data/sample_points"
@@ -38,6 +39,12 @@ optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 # Train and visualize loss
 loss_history = train_model(model, train_loader, optimizer, num_epochs=50, device=device, save_model=True)
 print("✅ Model trained!")
+
+#save loss history
+with open("model/loss_history.pkl", "wb") as f:
+    pickle.dump(loss_history, f)
+print("Loss history saved!")
+
 
 # Plot loss curve
 # plt.figure(figsize=(8, 5))
