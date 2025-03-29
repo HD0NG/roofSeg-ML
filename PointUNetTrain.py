@@ -2,18 +2,18 @@ from PointUNet import *
 import pickle
 
 # Define dataset paths
-points_folder = "data/sample_points"
-labels_folder = "data/sample_labels"
+points_folder = "data/roofNTNU/train/sample_points"
+labels_folder = "data/roofNTNU/train/sample_labels"
 
 # Create dataset instance
-train_dataset = LiDARPointCloudDataset(points_folder, labels_folder, max_points=128, mode="train")
+train_dataset = LiDARPointCloudDataset(points_folder, labels_folder, max_points=512, mode="train")
 
 # Create DataLoader
 # train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, collate_fn=collate_fn)
 
 train_loader = DataLoader(
     train_dataset, batch_size=4, shuffle=True,
-    num_workers=4,  # Use multiple CPU cores for faster loading
+    num_workers=8,  # Use multiple CPU cores for faster loading
     pin_memory=True,  # Optimizes GPU transfers
     collate_fn=collate_fn
 )
@@ -37,7 +37,7 @@ model = PointUNet(input_dim=3, emb_dim=128, output_dim=64).to(device)
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 
 # Train and visualize loss
-loss_history = train_model(model, train_loader, optimizer, num_epochs=50, device=device, save_model=True, save_path="model/pointnet_unet_checkpoint_100s_50e.pth")
+loss_history = train_model_d(model, train_loader, optimizer, num_epochs=20, device=device, save_model=True, save_path="model/pointUnet_checkpoint_newloss_200s_20e.pth")
 print("✅ Model trained!")
 
 #save loss history
