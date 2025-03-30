@@ -239,7 +239,7 @@ def train_model_d(model, train_loader, optimizer, num_epochs=20, device='cuda', 
     return loss_history
 
 # Post-Processing with DBSCAN for Instance Labels
-def cluster_instances(embeddings, eps=0.3, min_samples=3):
+def cluster_instances(embeddings, eps=0.5, min_samples=10):
     """
     Cluster points into roof faces using DBSCAN on embedding space.
     """
