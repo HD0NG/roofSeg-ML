@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Sequential as Seq, Linear as Lin, BatchNorm1d
+import open3d as o3d
+import numpy as np
 
 # Positional Encoding: [x, y, z, r, theta, phi]
 def add_positional_encoding(xyz):
@@ -12,6 +14,28 @@ def add_positional_encoding(xyz):
     phi = torch.acos(torch.clamp(z / r, min=-1.0, max=1.0))
     pe = torch.stack([x, y, z, r, theta, phi], dim=-1)
     return pe  # (B, N, 6)
+
+def compute_normals(points_np, k=16):
+    """
+    Estimate normals for a point cloud using Open3D.
+    Input: points_np (N, 3)
+    Output: normals_np (N, 3)
+    """
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points_np)
+    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamKNN(knn=k))
+    pcd.normalize_normals()
+    return np.asarray(pcd.normals)
+
+def add_positional_encoding_with_normals(xyz):
+    x, y, z = xyz[..., 0], xyz[..., 1], xyz[..., 2]
+    r = torch.sqrt(x**2 + y**2 + z**2) + 1e-8
+    theta = torch.atan2(y, x)
+    phi = torch.acos(torch.clamp(z / r, min=-1.0, max=1.0))
+    pe = torch.stack([x, y, z, r, theta, phi], dim=-1)
+    normals = compute_normals(xyz)
+    full = torch.cat([pe, normals], dim=-1)
+    return full  # (B, N, 9)
 
 # FPS utility
 def farthest_point_sampling(xyz, npoint):
@@ -47,18 +71,18 @@ class PointNetPPEncoderFP(nn.Module):
         self.sa1_npoint = 512
         self.sa2_npoint = 128
 
-        self.sa1_mlp = mlp_block([6, 64, 64, 128])     # input dim = 6 after PE
+        self.sa1_mlp = mlp_block([9, 64, 64, 128])     # input dim = 9 after full PE
         self.sa2_mlp = mlp_block([128, 128, 128, emb_dim])
 
         self.fp2_mlp = mlp_block([emb_dim + 128, 256, 256])
-        self.fp1_mlp = mlp_block([256 + 6, 128, emb_dim])
+        self.fp1_mlp = mlp_block([256 + 9, 128, emb_dim])
 
     def forward(self, xyz, return_skips=False):  # xyz: (B, N, 3)
         B, N, _ = xyz.shape
 
         # Add positional encoding
-        pe_xyz = add_positional_encoding(xyz)  # (B, N, 6)
-        l0_features = pe_xyz.transpose(1, 2)   # (B, 6, N)
+        pe_xyz = add_positional_encoding_with_normals(xyz)  # (B, N, 9)
+        l0_features = pe_xyz.transpose(1, 2)   # (B, 9, N)
 
         # -------- SA 1 --------
         fps_idx1 = farthest_point_sampling(xyz, self.sa1_npoint)
