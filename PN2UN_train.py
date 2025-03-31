@@ -1,6 +1,7 @@
 from PointUNet import *
 from PointNet2FPUNet import *
 import pickle
+import sys
 
 def train_model(model, train_loader, optimizer, num_epochs=10, device='cuda', save_model=True, save_path="pointnetpp_unet.pth"):
     model.to(device)
@@ -73,3 +74,7 @@ print("✅ Model trained!")
 with open("model/loss_history_pointnetpp_unet.pkl", "wb") as f:
     pickle.dump(loss_history, f)
 print("Loss history saved!")
+
+# print("✅ Test complete!")
+# add exit code
+sys.exit(0)
