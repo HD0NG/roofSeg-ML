@@ -53,7 +53,7 @@ class PointNetPPEncoderFP(nn.Module):
         self.fp2_mlp = mlp_block([emb_dim + 128, 256, 256])
         self.fp1_mlp = mlp_block([256 + 6, 128, emb_dim])
 
-    def forward(self, xyz):  # xyz: (B, N, 3)
+    def forward(self, xyz, return_skips=False):  # xyz: (B, N, 3)
         B, N, _ = xyz.shape
 
         # Add positional encoding
@@ -80,7 +80,11 @@ class PointNetPPEncoderFP(nn.Module):
         l1_up = F.interpolate(l1_fp, size=N, mode='nearest')
         l0_fp = self.fp1_mlp(torch.cat([l1_up, l0_features], dim=1))  # (B, emb_dim, N)
 
-        return l0_fp.permute(0, 2, 1)  # (B, N, emb_dim)
+        # return l0_fp.permute(0, 2, 1)  # (B, N, emb_dim)
+        if return_skips:
+            return l0_fp.permute(0, 2, 1), l1_fp.permute(0, 2, 1)  # (B, N, emb_dim), (B, N, 256)
+        else:
+            return l0_fp.permute(0, 2, 1)  # (B, N, emb_dim)
     
 # UNet Decoder
 # class UNetDecoder(nn.Module):
