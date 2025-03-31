@@ -33,9 +33,21 @@ def add_positional_encoding_with_normals(xyz):
     theta = torch.atan2(y, x)
     phi = torch.acos(torch.clamp(z / r, min=-1.0, max=1.0))
     pe = torch.stack([x, y, z, r, theta, phi], dim=-1)
-    normals = compute_normals(xyz)
-    full = torch.cat([pe, normals], dim=-1)
-    return full  # (B, N, 9)
+
+    # Convert to numpy for normal estimation
+    xyz_np = xyz.detach().cpu().numpy()  # (B, N, 3)
+    B = xyz_np.shape[0]
+    normal_list = []
+
+    for b in range(B):
+        normals_np = compute_normals(xyz_np[b])  # (N, 3)
+        normal_list.append(torch.tensor(normals_np, dtype=xyz.dtype, device=xyz.device))
+
+    normals = torch.stack(normal_list, dim=0)  # (B, N, 3)
+
+    full = torch.cat([pe, normals], dim=-1)  # (B, N, 9)
+    return full
+
 
 # FPS utility
 def farthest_point_sampling(xyz, npoint):

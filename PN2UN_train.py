@@ -136,10 +136,10 @@ optimizer = optim.Adam(
     weight_decay=1e-5
 )
 
-loss_history = train_model(model, train_loader, optimizer, num_epochs=80, device='cuda', save_model=True, save_path="model/pointnetpp_unet_2.pth")
+loss_history = train_model(model, train_loader, optimizer, num_epochs=100, device='cuda', save_model=True, save_path="model/pointnetpp_unet_3.pth")
 print("✅ Model trained!")
 # Save loss history
-with open("model/loss_history_pointnetpp_unet.pkl", "wb") as f:
+with open("model/loss_history_pointnetpp_unet_3.pkl", "wb") as f:
     pickle.dump(loss_history, f)
 print("Loss history saved!")
 
