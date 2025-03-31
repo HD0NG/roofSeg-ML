@@ -40,7 +40,7 @@ def train_model(model, train_loader, optimizer, num_epochs=10, device='cuda', sa
             delta_d = 1.5       # push margin ↑
             """
             loss = discriminative_loss(embeddings, labels, delta_v=0.5, delta_d=1.5,
-                        alpha=1.0, beta=1.0, gamma=0.001)
+                        alpha=1.0, beta=3.0, gamma=0.001)
             loss.backward()
             optimizer.step()
 
@@ -136,10 +136,10 @@ optimizer = optim.Adam(
     weight_decay=1e-5
 )
 
-loss_history = train_model(model, train_loader, optimizer, num_epochs=100, device='cuda', save_model=True, save_path="model/pointnetpp_unet_3.pth")
+loss_history = train_model(model, train_loader, optimizer, num_epochs=100, device='cuda', save_model=True, save_path="model/pointnetpp_unet_4.pth")
 print("✅ Model trained!")
 # Save loss history
-with open("model/loss_history_pointnetpp_unet_3.pkl", "wb") as f:
+with open("model/loss_history_pointnetpp_unet_4.pkl", "wb") as f:
     pickle.dump(loss_history, f)
 print("Loss history saved!")
 

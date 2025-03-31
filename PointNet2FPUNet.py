@@ -139,8 +139,27 @@ class PointNetPPEncoderFP(nn.Module):
 #         x = F.relu(self.bn2(self.conv2(x)))
 #         x = self.bn3(self.conv3(x))
 #         return x.permute(0, 2, 1)  # Back to (B, N, C)
+# class UNetDecoder(nn.Module):
+#     def __init__(self, emb_dim=128, output_dim=64):
+#         super(UNetDecoder, self).__init__()
+#         self.conv1 = nn.Conv1d(emb_dim, 128, 1)
+#         self.conv2 = nn.Conv1d(128, 64, 1)
+#         self.conv3 = nn.Conv1d(64, output_dim, 1)
+
+#         self.bn1 = nn.BatchNorm1d(128)
+#         self.bn2 = nn.BatchNorm1d(64)
+#         self.bn3 = nn.BatchNorm1d(output_dim)
+
+#     def forward(self, x):  # x: (B, N, emb_dim)
+#         x = x.permute(0, 2, 1)            # → (B, emb_dim, N)
+#         x = F.relu(self.bn1(self.conv1(x)))
+#         x = F.relu(self.bn2(self.conv2(x)))
+#         x = self.bn3(self.conv3(x))
+#         return x.permute(0, 2, 1)         # → (B, N, output_dim)
+
+# UNet Decoder
 class UNetDecoder(nn.Module):
-    def __init__(self, emb_dim=128, output_dim=64):
+    def __init__(self, emb_dim=128, output_dim=64, dropout_rate=0.4):
         super(UNetDecoder, self).__init__()
         self.conv1 = nn.Conv1d(emb_dim, 128, 1)
         self.conv2 = nn.Conv1d(128, 64, 1)
@@ -150,19 +169,25 @@ class UNetDecoder(nn.Module):
         self.bn2 = nn.BatchNorm1d(64)
         self.bn3 = nn.BatchNorm1d(output_dim)
 
+        self.dropout1 = nn.Dropout(p=dropout_rate)
+        self.dropout2 = nn.Dropout(p=dropout_rate)
+
     def forward(self, x):  # x: (B, N, emb_dim)
-        x = x.permute(0, 2, 1)            # → (B, emb_dim, N)
-        x = F.relu(self.bn1(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = self.bn3(self.conv3(x))
-        return x.permute(0, 2, 1)         # → (B, N, output_dim)
+        x = x.permute(0, 2, 1)                      # (B, emb_dim, N)
+        x = self.dropout1(F.relu(self.bn1(self.conv1(x))))  # (B, 128, N)
+        x = self.dropout2(F.relu(self.bn2(self.conv2(x))))  # (B, 64, N)
+        x = self.bn3(self.conv3(x))                         # (B, output_dim, N)
+        x = F.normalize(x, p=2, dim=1)                      # L2 normalize per point
+        return x.permute(0, 2, 1)                           # (B, N, output_dim)
+
+
 
 # PointNetPPUNe with PointNet++ Encoder and UNet Decoder
 class PointNetPPUNet(nn.Module):
     def __init__(self, emb_dim=128, output_dim=64):
         super().__init__()
         self.encoder = PointNetPPEncoderFP(emb_dim=emb_dim)  # FPS + PE + FP
-        self.decoder = UNetDecoder(emb_dim=emb_dim, output_dim=output_dim)
+        self.decoder = UNetDecoder(emb_dim=emb_dim, output_dim=output_dim, dropout_rate=0.4)  # UNet Decoder
 
     def forward(self, x):  # x: (B, N, 3)
         features = self.encoder(x)         # (B, N, emb_dim)
