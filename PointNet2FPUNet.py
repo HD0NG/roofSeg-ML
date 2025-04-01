@@ -195,3 +195,31 @@ class PointNetPPUNet(nn.Module):
         return output
 
 
+class ReconstructionHead(nn.Module):
+    def __init__(self, emb_dim):
+        super(ReconstructionHead, self).__init__()
+        self.decoder = nn.Sequential(
+            nn.Conv1d(emb_dim, 64, 1),
+            nn.ReLU(),
+            nn.Conv1d(64, 3, 1)  # Output (x, y, z)
+        )
+
+    def forward(self, x):  # x: (B, N, emb_dim)
+        x = x.permute(0, 2, 1)
+        out = self.decoder(x)  # (B, 3, N)
+        return out.permute(0, 2, 1)  # (B, N, 3)
+
+def chamfer_distance(x, y):
+    """
+    x: (B, N, 3)
+    y: (B, M, 3)
+    Returns mean Chamfer distance per batch
+    """
+    x = x.unsqueeze(2)  # (B, N, 1, 3)
+    y = y.unsqueeze(1)  # (B, 1, M, 3)
+    dist = torch.norm(x - y, dim=-1)  # (B, N, M)
+
+    min_dist_x, _ = dist.min(dim=2)  # (B, N)
+    min_dist_y, _ = dist.min(dim=1)  # (B, M)
+
+    return min_dist_x.mean(dim=1) + min_dist_y.mean(dim=1)  # (B,)

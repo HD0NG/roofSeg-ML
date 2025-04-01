@@ -16,8 +16,16 @@ def normalize_embeddings(embeddings):
     norms = np.linalg.norm(embeddings, axis=1, keepdims=True) + 1e-8
     return embeddings / norms
 
-def train_model(model, train_loader, optimizer, num_epochs=10, device='cuda', save_model=True, save_path="pointnetpp_unet.pth"):
+def train_model(model, train_loader, optimizer, 
+                recon_head=None, lambda_recon=0.1,
+                num_epochs=10, device='cuda', 
+                save_model=True, save_path="pointnetpp_unet.pth"):
+    
     model.to(device)
+    if recon_head:
+        recon_head.to(device)
+        recon_head.train()
+
     model.train()
     loss_history = []
 
@@ -29,18 +37,23 @@ def train_model(model, train_loader, optimizer, num_epochs=10, device='cuda', sa
             points, labels = points.to(device), labels.to(device)
             optimizer.zero_grad()
 
-            embeddings = model(points)  # (B, N, output_dim)
-            # Compute the discriminative loss
-            # ~~Reduce γ (reg term), Use δ_v = 0.3 and δ_d = 1.0~~
-            """
-            alpha = 1.0         # L_close weight
-            beta = 2.0          # L_apart weight ↑
-            gamma = 0.001       # L_reg
-            delta_v = 0.5       # pull margin
-            delta_d = 1.5       # push margin ↑
-            """
-            loss = discriminative_loss(embeddings, labels, delta_v=0.5, delta_d=1.5,
-                        alpha=1.0, beta=3.0, gamma=0.001)
+            embeddings = model(points)  # (B, N, emb_dim)
+
+            # === Discriminative Loss ===
+            emb_loss = discriminative_loss(
+                embeddings, labels,
+                delta_v=0.3, delta_d=2.5,
+                alpha=1.0, beta=5.0, gamma=0.0001
+            )
+
+            # === Optional Reconstruction Loss ===
+            if recon_head:
+                recon_points = recon_head(embeddings)  # (B, N, 3)
+                recon_loss = chamfer_distance(recon_points, points).mean()
+                loss = emb_loss + lambda_recon * recon_loss
+            else:
+                loss = emb_loss
+
             loss.backward()
             optimizer.step()
 
@@ -51,24 +64,19 @@ def train_model(model, train_loader, optimizer, num_epochs=10, device='cuda', sa
         loss_history.append(avg_loss)
         print(f"✅ Epoch {epoch + 1}: Loss = {avg_loss:.4f}")
 
+        # Optional Debug
         if (epoch + 1) % 10 == 0:
             model.eval()
             with torch.no_grad():
-                example_points = points[0].cpu().numpy()
-                example_labels = labels[0].cpu().numpy()
-                # example_normals = normals[0].cpu()
                 example_embed = model(points[0:1]).squeeze(0).cpu().numpy()
                 example_embed = normalize_embeddings(example_embed)
-
                 variance = np.var(example_embed, axis=0).mean()
                 print(f"📊 Embedding variance at epoch {epoch + 1}: {variance:.6f}")
-            
             model.train()
-            
 
     if save_model:
         torch.save(model.state_dict(), save_path)
-        print("💾 Model saved as "+save_path)
+        print("💾 Model saved as " + save_path)
 
     return loss_history
 
@@ -129,17 +137,29 @@ for points, labels in train_loader:
     break
 
 model = PointNetPPUNet(emb_dim=128, output_dim=64)
+recon_head = ReconstructionHead(emb_dim=64)
 
 optimizer = optim.Adam(
-    model.parameters(),
+    list(model.parameters()) + list(recon_head.parameters()), 
     lr=1e-4,
     weight_decay=1e-5
 )
 
-loss_history = train_model(model, train_loader, optimizer, num_epochs=100, device='cuda', save_model=True, save_path="model/pointnetpp_unet_4.pth")
+# loss_history = train_model(model, train_loader, optimizer, num_epochs=100, device='cuda', save_model=True, save_path="model/pointnetpp_unet_4.pth")
+loss_history = train_model(
+    model=model,
+    train_loader=train_loader,
+    optimizer=optimizer,
+    recon_head=recon_head,
+    lambda_recon=0.1,
+    num_epochs=100,
+    save_model=True,
+    save_path="model/pointnetpp_unet_5.pth",
+    device='cuda'
+)
 print("✅ Model trained!")
 # Save loss history
-with open("model/loss_history_pointnetpp_unet_4.pkl", "wb") as f:
+with open("model/loss_history_pointnetpp_unet_5.pkl", "wb") as f:
     pickle.dump(loss_history, f)
 print("Loss history saved!")
 
