@@ -3,4 +3,4 @@
 
 *.ipynb	merge=jupyternotebook
 
-*.ipynb filter=strip-notebook-metadata
+# *.ipynb filter=strip-notebook-metadata
