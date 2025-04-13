@@ -39,7 +39,7 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/pointnetpp_unet_8.pth"
+save_path = "model/pointnetpp_unet_9.pth"
 num_epochs = 50
 
 log_data = {
@@ -47,10 +47,10 @@ log_data = {
     "save_model_path": save_path,
     "loss_params" : {
         "alpha": 1.0,     
-        "beta": 10.0,     
+        "beta": 5.0,     
         "gamma": 0.0001,  
         "delta_v": 0.2,   
-        "delta_d": 3.5    
+        "delta_d": 2.5    
     },
     "training": {
         "epochs": num_epochs,
@@ -91,12 +91,14 @@ def train_model(model, train_loader, optimizer,
             optimizer.zero_grad()
 
             embeddings = model(points)  # (B, N, emb_dim)
+            #  Add a Tiny Gaussian Noise to Embeddings
+            embeddings = embeddings + torch.randn_like(embeddings) * 0.01
 
             # === Discriminative Loss ===
             emb_loss = discriminative_loss(
                 embeddings, labels,
-                delta_v=0.2, delta_d=3.5,
-                alpha=1.0, beta=10.0, gamma=0.0001
+                delta_v=0.2, delta_d=2.5,
+                alpha=1.0, beta=5.0, gamma=0.0001
             )
 
             # === Optional Reconstruction Loss ===
@@ -111,7 +113,7 @@ def train_model(model, train_loader, optimizer,
             
             if contrastive_loss:
                 contrastive = cosine_contrastive_loss(embeddings, labels, margin=0.5)
-                if epoch < 10:
+                if epoch < 5:
                     loss = lambda_cos * contrastive
                 else:
                     loss = emb_loss + lambda_cos * contrastive
@@ -157,7 +159,7 @@ loss_history = train_model(
     recon_head=None,
     lambda_recon=0.1,
     contrastive_loss=True,
-    lambda_cos=0.1,
+    lambda_cos=0.3,
     num_epochs=num_epochs,
     save_model=True,
     save_path=save_path,
