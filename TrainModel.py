@@ -39,7 +39,7 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/pointnetpp_unet_7.pth"
+save_path = "model/pointnetpp_unet_8.pth"
 num_epochs = 50
 
 log_data = {
@@ -61,7 +61,7 @@ log_data = {
         "reconstruction_head": False,
         "contrastive_loss": True,
         "lambda_recon": 0.1,
-        "lambda_cos": 0.1,
+        "lambda_cos": 0.3,
         "contrastive_margin": 0.5,
     },
     "loss_history": [],
@@ -70,7 +70,7 @@ log_data = {
 
 def train_model(model, train_loader, optimizer, 
                 recon_head=None, lambda_recon=0.1,
-                contrastive_loss=False, lambda_cos = 0.1,
+                contrastive_loss=False, lambda_cos = 0.3,
                 num_epochs=10, device='cuda', 
                 save_model=True, save_path="pointnetpp_unet.pth"):
     
@@ -108,9 +108,13 @@ def train_model(model, train_loader, optimizer,
                 loss = emb_loss
             
             # === Optional Contrastive Loss ===
+            
             if contrastive_loss:
                 contrastive = cosine_contrastive_loss(embeddings, labels, margin=0.5)
-                loss = emb_loss + lambda_cos * contrastive
+                if epoch < 10:
+                    loss = lambda_cos * contrastive
+                else:
+                    loss = emb_loss + lambda_cos * contrastive
 
             loss.backward()
             optimizer.step()
