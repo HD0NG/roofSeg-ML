@@ -39,25 +39,30 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/pointnetpp_unet_6.pth"
+save_path = "model/pointnetpp_unet_7.pth"
 num_epochs = 50
 
 log_data = {
     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     "save_model_path": save_path,
-    "loss_params": {
-        "alpha": 1.0,
-        "beta": 5.0,
-        "gamma": 0.0001,
-        "delta_v": 0.3,
-        "delta_d": 2.5
+    "loss_params" : {
+        "alpha": 1.0,     
+        "beta": 10.0,     
+        "gamma": 0.0001,  
+        "delta_v": 0.2,   
+        "delta_d": 3.5    
     },
     "training": {
         "epochs": num_epochs,
         "batch_size": train_loader.batch_size,
         "max_points": train_loader.dataset.max_points,
         "optimizer": type(optimizer).__name__,
-        "learning_rate": optimizer.param_groups[0]['lr']
+        "learning_rate": optimizer.param_groups[0]['lr'],
+        "reconstruction_head": False,
+        "contrastive_loss": True,
+        "lambda_recon": 0.1,
+        "lambda_cos": 0.1,
+        "contrastive_margin": 0.5,
     },
     "loss_history": [],
     "embedding_variance": []
@@ -65,6 +70,7 @@ log_data = {
 
 def train_model(model, train_loader, optimizer, 
                 recon_head=None, lambda_recon=0.1,
+                contrastive_loss=False, lambda_cos = 0.1,
                 num_epochs=10, device='cuda', 
                 save_model=True, save_path="pointnetpp_unet.pth"):
     
@@ -89,8 +95,8 @@ def train_model(model, train_loader, optimizer,
             # === Discriminative Loss ===
             emb_loss = discriminative_loss(
                 embeddings, labels,
-                delta_v=0.3, delta_d=2.5,
-                alpha=1.0, beta=5.0, gamma=0.0001
+                delta_v=0.2, delta_d=3.5,
+                alpha=1.0, beta=10.0, gamma=0.0001
             )
 
             # === Optional Reconstruction Loss ===
@@ -100,6 +106,11 @@ def train_model(model, train_loader, optimizer,
                 loss = emb_loss + lambda_recon * recon_loss
             else:
                 loss = emb_loss
+            
+            # === Optional Contrastive Loss ===
+            if contrastive_loss:
+                contrastive = cosine_contrastive_loss(embeddings, labels, margin=0.5)
+                loss = emb_loss + lambda_cos * contrastive
 
             loss.backward()
             optimizer.step()
@@ -141,6 +152,8 @@ loss_history = train_model(
     optimizer=optimizer,
     recon_head=None,
     lambda_recon=0.1,
+    contrastive_loss=True,
+    lambda_cos=0.1,
     num_epochs=num_epochs,
     save_model=True,
     save_path=save_path,

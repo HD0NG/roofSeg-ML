@@ -153,6 +153,32 @@ def discriminative_loss(embeddings, instance_labels, delta_v=0.5, delta_d=1.5,
 
     return total_loss / batch_size
 
+def cosine_contrastive_loss(embeddings, labels, margin=0.5):
+    """
+    embeddings: (B, N, D)
+    labels: (B, N)
+    """
+    B, N, D = embeddings.shape
+    embeddings = F.normalize(embeddings, p=2, dim=-1)  # Normalize for cosine
+
+    total_loss = 0
+    for b in range(B):
+        emb = embeddings[b]  # (N, D)
+        lbl = labels[b]      # (N,)
+
+        sim = torch.matmul(emb, emb.T)  # (N, N)
+        label_matrix = lbl.unsqueeze(0) == lbl.unsqueeze(1)  # (N, N)
+
+        pos_mask = label_matrix.float()
+        neg_mask = 1.0 - pos_mask
+
+        pos_loss = (1 - sim) * pos_mask
+        neg_loss = F.relu(sim - margin) * neg_mask
+
+        total_loss += (pos_loss.sum() + neg_loss.sum()) / (N * N)
+
+    return total_loss / B
+
 def normalize_embeddings(embeddings):
     """
     Normalize embeddings to unit L2 norm per point.
