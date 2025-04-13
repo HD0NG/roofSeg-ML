@@ -118,7 +118,8 @@ def train_model(model, train_loader, optimizer,
             with torch.no_grad():
                 example_embed = model(points[0:1]).squeeze(0).cpu().numpy()
                 example_embed = normalize_embeddings(example_embed)
-                variance = np.var(example_embed, axis=0).mean()
+                # variance = np.var(example_embed, axis=0).mean()
+                variance = float(np.var(example_embed, axis=0).mean())
                 log_data["embedding_variance"].append({
                     "epoch": epoch + 1,
                     "variance": variance
