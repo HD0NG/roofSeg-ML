@@ -8,8 +8,8 @@ from datetime import datetime
 import os
 
 # Define dataset paths
-points_folder = "data/roofNTNU/train_test_split/points_train"
-labels_folder = "data/roofNTNU/train_test_split/labels_train"
+points_folder = "data/roofNTNU/train_test_split/points_train_n"
+labels_folder = "data/roofNTNU/train_test_split/labels_train_n"
 
 # Create dataset instance
 train_dataset = LiDARPointCloudDataset(points_folder, labels_folder, max_points=2048, mode="train")
@@ -39,7 +39,7 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/pointnetpp_unet_9.pth"
+save_path = "model/pointnetpp_unet_10_n.pth"
 num_epochs = 50
 
 log_data = {
@@ -172,7 +172,7 @@ with open(loss_history_path, "wb") as f:
     pickle.dump(loss_history, f)
 print("Loss history saved!")
 
-log_path = save_path.replace(".pth", "train_log.json")
+log_path = save_path.replace(".pth", "_train_log.json")
 # log_path = os.path.join(os.path.dirname(save_path), "train_log.json")
 with open(log_path, "w") as f:
     json.dump(log_data, f, indent=4)
