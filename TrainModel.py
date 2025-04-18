@@ -1,5 +1,6 @@
 from NetModel import *
 from AFunctions import *
+from DebugTools import *
 import torch.optim as optim
 import pickle
 import sys
@@ -39,7 +40,7 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/pointnetpp_unet_10_n.pth"
+save_path = "model/pointnetpp_unet_11_n.pth"
 num_epochs = 50
 
 log_data = {
@@ -47,10 +48,10 @@ log_data = {
     "save_model_path": save_path,
     "loss_params" : {
         "alpha": 1.0,     
-        "beta": 5.0,     
+        "beta": 3.0,     
         "gamma": 0.0001,  
-        "delta_v": 0.2,   
-        "delta_d": 2.5    
+        "delta_v": 0.3,   
+        "delta_d": 1.5    
     },
     "training": {
         "epochs": num_epochs,
@@ -59,9 +60,9 @@ log_data = {
         "optimizer": type(optimizer).__name__,
         "learning_rate": optimizer.param_groups[0]['lr'],
         "reconstruction_head": False,
-        "contrastive_loss": True,
+        "contrastive_loss": False,
         "lambda_recon": 0.1,
-        "lambda_cos": 0.3,
+        "lambda_cos": 0.0,
         "contrastive_margin": 0.5,
     },
     "loss_history": [],
@@ -71,7 +72,9 @@ log_data = {
 def train_model(model, train_loader, optimizer, 
                 recon_head=None, lambda_recon=0.1,
                 contrastive_loss=False, lambda_cos = 0.3,
-                num_epochs=10, device='cuda', 
+                num_epochs=10, device='cuda',
+                alpha=1.0, beta=3.0, gamma=0.0001,
+                delta_v=0.3, delta_d=1.5, 
                 save_model=True, save_path="pointnetpp_unet.pth"):
     
     model.to(device)
@@ -97,8 +100,8 @@ def train_model(model, train_loader, optimizer,
             # === Discriminative Loss ===
             emb_loss = discriminative_loss(
                 embeddings, labels,
-                delta_v=0.2, delta_d=2.5,
-                alpha=1.0, beta=5.0, gamma=0.0001
+                delta_v=delta_v, delta_d=delta_d,
+                alpha=alpha, beta=beta, gamma=gamma
             )
 
             # === Optional Reconstruction Loss ===
@@ -133,15 +136,33 @@ def train_model(model, train_loader, optimizer,
         if (epoch + 1) % 10 == 0:
             model.eval()
             with torch.no_grad():
-                example_embed = model(points[0:1]).squeeze(0).cpu().numpy()
+                # Run one example (first in batch)
+                example_embed = model(points[0:1]).squeeze(0).cpu().numpy()  # [N, D]
                 example_embed = normalize_embeddings(example_embed)
-                # variance = np.var(example_embed, axis=0).mean()
+                example_labels = labels[0].cpu().numpy()  # [N]
+
+                # --- Save Embedding Variance ---
                 variance = float(np.var(example_embed, axis=0).mean())
+                print(f"📊 Embedding variance at epoch {epoch + 1}: {variance:.6f}")
+
+                # --- Save Visualizations ---
+                vis_dir = f"model/debug/epoch_{epoch + 1}"
+                os.makedirs(vis_dir, exist_ok=True)
+
+                visualize_embeddings(example_embed, example_labels, f"{vis_dir}/pca_gt.png", title="GT", method="pca")
+                visualize_embeddings(example_embed, example_labels, f"{vis_dir}/tsne_gt.png", title="GT", method="tsne")
+
+                # --- Centroid Stats ---
+                centroid_stats = compute_centroid_distances(example_embed, example_labels)
+                print(f"📐 Centroid distances: min={centroid_stats['min']:.3f}, mean={centroid_stats['mean']:.3f}, max={centroid_stats['max']:.3f}")
+
+                # --- Log All to JSON ---
                 log_data["embedding_variance"].append({
                     "epoch": epoch + 1,
-                    "variance": variance
+                    "variance": variance,
+                    "centroid_distance": centroid_stats
                 })
-                print(f"📊 Embedding variance at epoch {epoch + 1}: {variance:.6f}")
+
             model.train()
 
     if save_model:
@@ -158,8 +179,13 @@ loss_history = train_model(
     optimizer=optimizer,
     recon_head=None,
     lambda_recon=0.1,
-    contrastive_loss=True,
-    lambda_cos=0.3,
+    contrastive_loss=False,
+    lambda_cos=0.0,
+    alpha= 1.0,
+    beta=3.0,
+    gamma=0.0001,
+    delta_v=0.3,
+    delta_d=1.5,
     num_epochs=num_epochs,
     save_model=True,
     save_path=save_path,
@@ -181,5 +207,3 @@ print(f"📒 Training log saved to {log_path}")
 # print("✅ Test complete!")
 # add exit code
 sys.exit(0)
-
-
