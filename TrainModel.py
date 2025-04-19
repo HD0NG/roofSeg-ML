@@ -32,7 +32,8 @@ train_loader = DataLoader(
 #     break
 
 # Initialize model & optimizer
-model = PointNetPPUNet(emb_dim=128, output_dim=128)
+# model = PointNetPPUNet(emb_dim=128, output_dim=128)
+model = PointUNet(emb_dim=128, output_dim=128)
 # recon_head = ReconstructionHead(emb_dim=64)
 
 optimizer = optim.Adam(
