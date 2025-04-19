@@ -32,7 +32,7 @@ train_loader = DataLoader(
 #     break
 
 # Initialize model & optimizer
-model = PointNetPPUNet(emb_dim=128, output_dim=64)
+model = PointNetPPUNet(emb_dim=128, output_dim=128)
 # recon_head = ReconstructionHead(emb_dim=64)
 
 optimizer = optim.Adam(
@@ -46,12 +46,19 @@ num_epochs = 50
 log_data = {
     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     "save_model_path": save_path,
+    "model_params": {
+        "emb_dim": 128,
+        "output_dim": 128,
+        "num_layers": 4,
+        "num_points": train_loader.dataset.max_points,
+        "batch_size": train_loader.batch_size,
+    },
     "loss_params" : {
         "alpha": 1.0,     
-        "beta": 3.0,     
+        "beta": 4.0,     
         "gamma": 0.0001,  
         "delta_v": 0.3,   
-        "delta_d": 1.5    
+        "delta_d": 2.0,    
     },
     "training": {
         "epochs": num_epochs,
@@ -182,10 +189,10 @@ loss_history = train_model(
     contrastive_loss=False,
     lambda_cos=0.0,
     alpha= 1.0,
-    beta=3.0,
+    beta=4.0,
     gamma=0.0001,
     delta_v=0.3,
-    delta_d=1.5,
+    delta_d=2.0,
     num_epochs=num_epochs,
     save_model=True,
     save_path=save_path,
