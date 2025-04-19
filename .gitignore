@@ -5,3 +5,4 @@ results/
 __pycache__/
 training.config.js
 .ipynb_checkpoints/
+test_results/
