@@ -27,20 +27,34 @@ import matplotlib.pyplot as plt
 
 #     return labels
 
-def cluster_embeddings(embeddings, bandwidth=None):
+# def cluster_embeddings(embeddings, bandwidth=None):
+#     if bandwidth is None:
+#         bandwidth = estimate_bandwidth(embeddings, quantile=0.1)
+#         # clustering = MeanShift(bandwidth=bandwidth, bin_seeding=True).fit(embeddings)
+#     try:
+#         clustering = MeanShift(bandwidth=bandwidth, bin_seeding=True).fit(embeddings)
+#     except ValueError as e:
+#         print("Falling back to bin_seeding=False due to error:", e)
+#         clustering = MeanShift(bandwidth=bandwidth, bin_seeding=False).fit(embeddings)
+#         # bandwidth = estimate_bandwidth(embeddings, quantile=0.2, n_samples=500)
+#     # ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+#     # labels = ms.fit_predict(embeddings)
+#     return clustering.labels_
+
+def cluster_embeddings(embeddings, bandwidth=None, min_bandwidth=0.25):
     if bandwidth is None:
         bandwidth = estimate_bandwidth(embeddings, quantile=0.1)
-        # clustering = MeanShift(bandwidth=bandwidth, bin_seeding=True).fit(embeddings)
+        if bandwidth < min_bandwidth:
+            print(f"⚠️ Estimated bandwidth {bandwidth:.4f} too small — using fallback: {min_bandwidth}")
+            bandwidth = min_bandwidth
+
     try:
         clustering = MeanShift(bandwidth=bandwidth, bin_seeding=True).fit(embeddings)
     except ValueError as e:
-        print("Falling back to bin_seeding=False due to error:", e)
+        print(f"❌ MeanShift failed (bin_seeding=True): {e}")
         clustering = MeanShift(bandwidth=bandwidth, bin_seeding=False).fit(embeddings)
-        # bandwidth = estimate_bandwidth(embeddings, quantile=0.2, n_samples=500)
-    # ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
-    # labels = ms.fit_predict(embeddings)
-    return clustering.labels_
 
+    return clustering.labels_
 
 def adjusted_rand_index(pred_labels, gt_labels):
     return adjusted_rand_score(gt_labels, pred_labels)
@@ -78,7 +92,11 @@ def save_cluster_plot(points, labels, path):
 def run_inference_on_scene(model, pointcloud, gt_labels, device, save_path, scene_name):
     model.eval()
     with torch.no_grad():
-        pc_tensor = torch.tensor(pointcloud, dtype=torch.float32).unsqueeze(0).to(device)
+        # pc_tensor = torch.tensor(pointcloud, dtype=torch.float32).unsqueeze(0).to(device)
+        if isinstance(pointcloud, torch.Tensor):
+            pc_tensor = pointcloud.clone().detach().unsqueeze(0).to(device)
+        else:
+            pc_tensor = torch.tensor(pointcloud, dtype=torch.float32).unsqueeze(0).to(device)
         embeddings = model(pc_tensor).squeeze(0).cpu().numpy()
 
         pred_labels = cluster_embeddings(embeddings)
@@ -116,3 +134,4 @@ def batch_evaluate(model, dataset, device, output_dir):
         json.dump(all_metrics, f, indent=2)
 
     print("\n✅ Batch evaluation complete. Summary written to evaluation_summary.json")
+

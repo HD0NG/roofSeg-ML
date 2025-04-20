@@ -4,5 +4,6 @@ results/
 .DS_Store
 __pycache__/
 training.config.js
+testing.config.js
 .ipynb_checkpoints/
 test_results/

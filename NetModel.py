@@ -179,15 +179,30 @@ class PointNetEncoder(nn.Module):
         self.bn2 = nn.BatchNorm1d(128)
         self.bn3 = nn.BatchNorm1d(emb_dim)
 
-    def forward(self, x):
-        x = x.permute(0, 2, 1)  # Convert to (B, C, N)
+    # def forward(self, x):
+    #     x = x.permute(0, 2, 1)  # Convert to (B, C, N)
+    #     x = F.relu(self.bn1(self.conv1(x)))
+    #     x = F.relu(self.bn2(self.conv2(x)))
+    #     x = self.bn3(self.conv3(x))
+    #     global_feature = torch.max(x, 2, keepdim=True)[0]
+    #     global_feature = global_feature.repeat(1, 1, x.shape[2])
+    #     x = torch.cat([x, global_feature], dim=1)
+    #     return x.permute(0, 2, 1)  # Back to (B, N, C)
+    def forward(self, x, return_skips=False):
+        x = x.permute(0, 2, 1)  # (B, C, N)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
-        x = self.bn3(self.conv3(x))
-        global_feature = torch.max(x, 2, keepdim=True)[0]
-        global_feature = global_feature.repeat(1, 1, x.shape[2])
-        x = torch.cat([x, global_feature], dim=1)
-        return x.permute(0, 2, 1)  # Back to (B, N, C)
+        x = self.bn3(self.conv3(x))  # (B, C, N)
+
+        global_feature = torch.max(x, 2, keepdim=True)[0]  # (B, C, 1)
+        global_feature = global_feature.repeat(1, 1, x.shape[2])  # (B, C, N)
+
+        x = torch.cat([x, global_feature], dim=1)  # (B, 2C, N)
+        out = x.permute(0, 2, 1)  # (B, N, 2C)
+
+        if return_skips:
+            return out, [out]  # dummy skip structure
+        return out
 
 # UNet Model
 class SipUNetDecoder(nn.Module):
