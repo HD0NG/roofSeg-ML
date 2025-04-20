@@ -41,13 +41,14 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/pointnetpp_unet_11_n.pth"
+save_path = "model/pointunet_02_n.pth"
 num_epochs = 50
 
 log_data = {
     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     "save_model_path": save_path,
     "model_params": {
+        "model_type": "PointUNet",
         "emb_dim": 128,
         "output_dim": 128,
         "num_layers": 4,
