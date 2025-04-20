@@ -1,5 +1,5 @@
-from PointUNet import *
-from PointNet2FPUNet import *
+from Archieve.PointUNet import *
+from Archieve.PointNet2FPUNet import *
 import pickle
 import sys
 from sklearn.decomposition import PCA
