@@ -5,6 +5,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import pickle
+from scipy.spatial.distance import pdist, squareform
 
 def load_clean_point_cloud(file_path, max_points=512):
     """
@@ -99,3 +100,29 @@ def plot_loss_from_pkl(pkl_path):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
+
+def compute_centroid_distances(embeddings, labels):
+    """Returns pairwise centroid distances and centroid variance."""
+    unique_labels = np.unique(labels)
+    centroids = []
+    for lbl in unique_labels:
+        mask = labels == lbl
+        if np.sum(mask) == 0:
+            continue
+        centroid = embeddings[mask].mean(axis=0)
+        centroids.append(centroid)
+    
+    if len(centroids) < 2:
+        return {'min': 0.0, 'max': 0.0, 'mean': 0.0, 'std': 0.0, 'num_clusters': len(centroids)}
+    
+    centroids = np.stack(centroids)
+    dist_matrix = squareform(pdist(centroids))
+    np.fill_diagonal(dist_matrix, np.nan)  # ignore self-distances
+
+    return {
+        'min': float(np.nanmin(dist_matrix)),
+        'max': float(np.nanmax(dist_matrix)),
+        'mean': float(np.nanmean(dist_matrix)),
+        'std': float(np.nanstd(dist_matrix)),
+        'num_clusters': len(centroids)
+    }

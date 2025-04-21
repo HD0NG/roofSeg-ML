@@ -4,6 +4,7 @@ import sys
 import json
 from datetime import datetime
 import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 from tqdm import tqdm
 import torch

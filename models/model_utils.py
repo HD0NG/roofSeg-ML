@@ -36,3 +36,21 @@ class UNetDecoder(nn.Module):
         x = self.bn3(self.conv3(x))                         # (B, output_dim, N)
         x = F.normalize(x, p=2, dim=1)                      # L2 normalize per point
         return x.permute(0, 2, 1)                           # (B, N, output_dim)
+
+# UNet Model
+class SipUNetDecoder(nn.Module):
+    def __init__(self, emb_dim=128, output_dim=64):
+        super(SipUNetDecoder, self).__init__()
+        self.conv1 = nn.Conv1d(emb_dim * 2, 128, 1)
+        self.conv2 = nn.Conv1d(128, 64, 1)
+        self.conv3 = nn.Conv1d(64, output_dim, 1)
+        self.bn1 = nn.BatchNorm1d(128)
+        self.bn2 = nn.BatchNorm1d(64)
+        self.bn3 = nn.BatchNorm1d(output_dim)
+
+    def forward(self, x):
+        x = x.permute(0, 2, 1)  # Convert to (B, C, N)
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.bn3(self.conv3(x))
+        return x.permute(0, 2, 1)  # Back to (B, N, C)
