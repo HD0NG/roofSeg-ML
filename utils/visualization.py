@@ -46,7 +46,7 @@ def load_clean_point_cloud(file_path, max_points=512):
 
     return valid_points
 
-def visualize_embeddings(embeddings, labels=None, method='pca'):
+def visualize_embeddings(embeddings, labels=None, method='pca', title=None):
     """
     Visualize 2D projection of embeddings via PCA or t-SNE.
     """
@@ -56,6 +56,9 @@ def visualize_embeddings(embeddings, labels=None, method='pca'):
         reducer = TSNE(n_components=2, perplexity=30)
     else:
         raise ValueError("Method must be 'pca' or 'tsne'.")
+    
+    if title is None:
+        title = f'Embedding Projection ({method.upper()})'
 
     projected = reducer.fit_transform(embeddings)
 
