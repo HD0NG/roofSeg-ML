@@ -25,15 +25,31 @@ def chamfer_distance(x, y):
 
     return min_dist_x.mean(dim=1) + min_dist_y.mean(dim=1)  # (B,)
 
+# def collate_fn(batch):
+#     """
+#     Custom collate function to handle variable-length point clouds.
+#     Stacks padded point clouds into a batch.
+#     """
+#     point_clouds, labels = zip(*batch)
+
+#     # Convert to PyTorch tensors
+#     point_clouds = torch.stack(point_clouds)  # (batch_size, max_points, 3)
+#     labels = torch.stack(labels)  # (batch_size, max_points)
+
+#     return point_clouds, labels
+
 def collate_fn(batch):
     """
-    Custom collate function to handle variable-length point clouds.
-    Stacks padded point clouds into a batch.
+    Custom collate function to handle variable-length point clouds and instance counts.
+    Returns:
+        - points: (B, N, 3)
+        - labels: (B, N)
+        - instance_counts: (B,)
     """
-    point_clouds, labels = zip(*batch)
+    point_clouds, labels, counts = zip(*batch)
 
-    # Convert to PyTorch tensors
-    point_clouds = torch.stack(point_clouds)  # (batch_size, max_points, 3)
-    labels = torch.stack(labels)  # (batch_size, max_points)
+    point_clouds = torch.stack(point_clouds)  # (B, N, 3)
+    labels = torch.stack(labels)              # (B, N)
+    counts = torch.tensor(counts, dtype=torch.float32)  # (B,)
 
-    return point_clouds, labels
+    return point_clouds, labels, counts

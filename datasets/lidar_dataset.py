@@ -53,8 +53,23 @@ class LiDARPointCloudDataset(Dataset):
             labels = np.pad(labels, (0, max(0, num_points - len(labels))), 'constant', constant_values=0)
         return labels
 
+    # def relabel_instances(self, labels):
+    #     unique = np.unique(labels[labels != -1])
+    #     remap = {old: new for new, old in enumerate(unique)}
+    #     relabeled = np.array([remap.get(l, -1) for l in labels], dtype=np.int64)
+    #     return relabeled, len(unique)
     def relabel_instances(self, labels):
-        unique = np.unique(labels[labels != -1])
+        """
+        Relabels instance IDs to be 0-indexed and returns the new labels + instance count.
+        Padding labels (-1) are ignored.
+        """
+        valid_mask = labels != -1
+        unique = np.unique(labels[valid_mask])
+
+        if len(unique) == 0:
+            # No valid instances: return all -1s and count = 0
+            return np.full_like(labels, -1, dtype=np.int64), 0
+
         remap = {old: new for new, old in enumerate(unique)}
         relabeled = np.array([remap.get(l, -1) for l in labels], dtype=np.int64)
         return relabeled, len(unique)
@@ -89,9 +104,13 @@ class LiDARPointCloudDataset(Dataset):
         point_cloud = self.load_point_cloud(point_path)
         labels = self.load_labels(label_path, num_points=point_cloud.shape[0])
 
-        labels, instance_count = self.relabel_instances(labels)
+        # Relabel + get instance count
+        if self.mode == "train":
+            labels, instance_count = self.relabel_instances(labels)
+        else:
+            instance_count = len(np.unique(labels[labels != -1]))
 
         # Apply padding or subsampling
         point_cloud, labels = self.pad_or_subsample(point_cloud, labels)
 
-        return torch.tensor(point_cloud, dtype=torch.float32), torch.tensor(labels, dtype=torch.long)
+        return torch.tensor(point_cloud, dtype=torch.float32), torch.tensor(labels, dtype=torch.long), instance_count

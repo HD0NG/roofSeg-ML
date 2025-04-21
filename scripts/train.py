@@ -105,13 +105,14 @@ def train_model(model, train_loader, optimizer,
         total_loss = 0
         progress_bar = tqdm(train_loader, desc=f"Epoch {epoch + 1}/{num_epochs}")
 
-        for points, labels in progress_bar:
+        # for points, labels in progress_bar:
+        for points, labels, instance_counts in progress_bar:
             points, labels = points.to(device), labels.to(device)
             optimizer.zero_grad()
 
             # embeddings = model(points)  # (B, N, emb_dim)
             embeddings, count_pred = model(points)  # new unpack
-            instance_counts = (labels != -1).int().unique(return_counts=True)[1].float()  # actual count per batch
+            # instance_counts = (labels != -1).int().unique(return_counts=True)[1].float()  # actual count per batch
 
             #  Add a Tiny Gaussian Noise to Embeddings
             embeddings = embeddings + torch.randn_like(embeddings) * 0.01
