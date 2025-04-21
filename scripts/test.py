@@ -8,6 +8,8 @@ from datasets.lidar_dataset import LiDARPointCloudDataset
 from torch.utils.data import DataLoader
 from utils.evaluation import batch_evaluate
 from utils.miscellaneous import collate_fn
+import json
+
 # Define dataset paths
 points_folder = "data/roofNTNU/train_test_split/points_test_n"
 labels_folder = "data/roofNTNU/train_test_split/labels_test_n"
@@ -17,9 +19,9 @@ dataset = LiDARPointCloudDataset(points_folder, labels_folder, max_points=2048, 
 
 dataloader = DataLoader(
     dataset,
-    batch_size=4,                # ← you still want per-scene evaluation
+    batch_size=1,                # ← you still want per-scene evaluation
     shuffle=False,
-    num_workers=8,              # Use multiple CPU cores for faster loading
+    num_workers=4,              # Use multiple CPU cores for faster loading
     collate_fn=collate_fn        # ← the one that returns (points, labels, count)
 )
 
@@ -32,9 +34,20 @@ model.load_state_dict(torch.load("model/PointNetPPUNet_12_n_re.pth", map_locatio
 model.eval()  # Set model to evaluation mode
 print("✅ Model loaded successfully!")
 
-batch_evaluate(
+output_dir = "test_results/PointNetPPUNet_12_n_re"
+# Create output directory if it doesn't exist
+os.makedirs(output_dir, exist_ok=True)
+
+results = batch_evaluate(
     model=model,
     dataloader=dataloader,
     device=device,
-    output_dir="test_results/PointNetPPUNet_12_n_re"
+    output_dir=output_dir
 )
+
+print("\n🎯 Overall Summary:")
+print(json.dumps(results, indent=2))
+
+with open(os.path.join(output_dir, "complexity_summary.json"), "w") as f:
+    json.dump(results, f, indent=2)
+print("📝 Saved complexity breakdown to complexity_summary.json")

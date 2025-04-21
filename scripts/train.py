@@ -46,8 +46,8 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/PointNetPPUNet_12_n_re.pth"
-num_epochs = 50
+save_path = "model/PointNetPPUNet_13_n_re.pth"
+num_epochs = 80
 
 log_data = {
     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -62,10 +62,10 @@ log_data = {
     },
     "loss_params" : {
         "alpha": 1.0,     
-        "beta": 4.0,     
+        "beta": 3.0,     
         "gamma": 0.0001,  
         "delta_v": 0.3,   
-        "delta_d": 2.0,    
+        "delta_d": 1.5,    
     },
     "training": {
         "epochs": num_epochs,
@@ -222,10 +222,10 @@ loss_history = train_model(
     contrastive_loss=False,
     lambda_cos=0.0,
     alpha= 1.0,
-    beta=4.0,
+    beta=3.0,
     gamma=0.0001,
     delta_v=0.3,
-    delta_d=2.0,
+    delta_d=1.5,
     num_epochs=num_epochs,
     save_model=True,
     save_path=save_path,

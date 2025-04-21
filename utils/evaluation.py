@@ -138,8 +138,6 @@ def run_inference_on_scene(model, pointcloud, gt_labels, device, save_path, scen
 
 #     print("\n✅ Batch evaluation complete. Summary written to evaluation_summary.json")
 
-from collections import defaultdict
-
 def batch_evaluate(model, dataloader, device, output_dir):
     os.makedirs(output_dir, exist_ok=True)
     all_metrics = []
@@ -152,7 +150,6 @@ def batch_evaluate(model, dataloader, device, output_dir):
         labels_np = labels.squeeze(0).cpu().numpy()
 
         result = run_inference_on_scene(model, points_np, labels_np, device, output_dir, scene_name)
-        all_metrics.append(result)
 
         # Bucket complexity: by # of GT instances
         gt_count = result["num_gt_instances"]
@@ -163,6 +160,8 @@ def batch_evaluate(model, dataloader, device, output_dir):
         else:
             complexity = "complex"
 
+        result["complexity"] = complexity  # ✅ now it's defined
+        all_metrics.append(result)
         complexity_buckets[complexity].append((result["ARI"], result["mean_IoU"]))
 
     # Save per-scene metrics
@@ -179,3 +178,8 @@ def batch_evaluate(model, dataloader, device, output_dir):
             aris = [a for a, _ in scores]
             ious = [m for _, m in scores]
             print(f"  {level.capitalize()} ({len(scores)} scenes): ARI={np.mean(aris):.3f}, mIoU={np.mean(ious):.3f}")
+
+    return {
+        "all_metrics": all_metrics,
+        "complexity_buckets": complexity_buckets
+    }
