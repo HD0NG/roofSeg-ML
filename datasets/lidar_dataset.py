@@ -53,6 +53,11 @@ class LiDARPointCloudDataset(Dataset):
             labels = np.pad(labels, (0, max(0, num_points - len(labels))), 'constant', constant_values=0)
         return labels
 
+    def relabel_instances(labels):
+        unique = np.unique(labels[labels != -1])  # ignore padding
+        remap = {old: new for new, old in enumerate(unique)}
+        return np.array([remap.get(l, -1) for l in labels], dtype=np.int64)
+
     def pad_or_subsample(self, points, labels):
         """Ensures a fixed number of points per cloud using padding or subsampling."""
         num_points = points.shape[0]
@@ -72,6 +77,7 @@ class LiDARPointCloudDataset(Dataset):
 
         return points, labels
 
+
     def __len__(self):
         return len(self.point_files)
 
@@ -81,6 +87,10 @@ class LiDARPointCloudDataset(Dataset):
 
         point_cloud = self.load_point_cloud(point_path)
         labels = self.load_labels(label_path, num_points=point_cloud.shape[0])
+
+        # Relabel instances if needed
+        if self.mode == "train":
+            labels = self.relabel_instances(labels)
 
         # Apply padding or subsampling
         point_cloud, labels = self.pad_or_subsample(point_cloud, labels)
