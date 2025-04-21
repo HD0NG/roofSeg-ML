@@ -1,6 +1,6 @@
 # %%
 # from PointNet2FPUNet import *
-from NetModel import *
+from Archieve.NetModel import *
 import numpy as np
 from sklearn.cluster import MeanShift, estimate_bandwidth
 import plotly.express as px
