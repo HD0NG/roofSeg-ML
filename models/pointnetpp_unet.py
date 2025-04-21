@@ -57,7 +57,20 @@ class PointNetPPUNet(nn.Module):
         self.encoder = PointNetPPEncoderFP(emb_dim=emb_dim)  # FPS + PE + FP
         self.decoder = UNetDecoder(emb_dim=emb_dim, output_dim=output_dim, dropout_rate=0.4)  # UNet Decoder
 
+        # Instance count prediction head
+        self.count_head = nn.Sequential(
+            nn.Linear(output_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
+
     def forward(self, x):  # x: (B, N, 3)
         features = self.encoder(x)         # (B, N, emb_dim)
-        output = self.decoder(features)    # (B, N, output_dim)
-        return output
+        embeddings = self.decoder(features)    # (B, N, output_dim)
+
+        # Predict count from pooled embeddings
+        pooled = embeddings.mean(dim=1)        # (B, output_dim)
+        count_pred = self.count_head(pooled).squeeze(-1)  # (B,)
+
+        return embeddings, count_pred
+        # return output

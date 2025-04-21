@@ -49,9 +49,19 @@ def run_inference_on_scene(model, pointcloud, gt_labels, device, save_path, scen
             pc_tensor = pointcloud.clone().detach().unsqueeze(0).to(device)
         else:
             pc_tensor = torch.tensor(pointcloud, dtype=torch.float32).unsqueeze(0).to(device)
-        embeddings = model(pc_tensor).squeeze(0).cpu().numpy()
+        # embeddings = model(pc_tensor).squeeze(0).cpu().numpy()
+        embeddings, count_pred = model(pc_tensor)  # returns embeddings + predicted count
+        predicted_count = max(1, int(torch.clamp(count_pred.squeeze(), min=1.0, max=64.0).item()))
+        embeddings_np = embeddings.squeeze(0).cpu().numpy()
 
-        pred_labels = cluster_embeddings(embeddings)
+        # Dynamically modulate bandwidth
+        base_bandwidth = 1.0
+        min_bandwidth = 0.25
+        bandwidth = max(min_bandwidth, base_bandwidth / (predicted_count ** 0.5))
+
+        pred_labels = cluster_embeddings(embeddings_np, bandwidth=bandwidth)
+
+        # pred_labels = cluster_embeddings(embeddings)
         ari = adjusted_rand_index(pred_labels, gt_labels)
         miou = instance_mean_iou(gt_labels, pred_labels)
 

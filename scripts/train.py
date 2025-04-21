@@ -8,6 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import numpy as np
 from tqdm import tqdm
 import torch
+import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from utils.miscellaneous import collate_fn, normalize_embeddings, chamfer_distance
 from datasets.lidar_dataset import LiDARPointCloudDataset
@@ -45,14 +46,14 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/pointunet_02_n.pth"
+save_path = "model/PointNetPPUNet_12_n_re.pth"
 num_epochs = 50
 
 log_data = {
     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     "save_model_path": save_path,
     "model_params": {
-        "model_type": "PointUNet",
+        "model_type": "PointNetPPUNet",
         "emb_dim": 128,
         "output_dim": 128,
         "num_layers": 4,
@@ -75,6 +76,7 @@ log_data = {
         "reconstruction_head": False,
         "contrastive_loss": False,
         "lambda_recon": 0.1,
+        "lambda_count": 0.1,
         "lambda_cos": 0.0,
         "contrastive_margin": 0.5,
     },
@@ -85,6 +87,7 @@ log_data = {
 def train_model(model, train_loader, optimizer, 
                 recon_head=None, lambda_recon=0.1,
                 contrastive_loss=False, lambda_cos = 0.3,
+                lambda_count=0.1,
                 num_epochs=10, device='cuda',
                 alpha=1.0, beta=3.0, gamma=0.0001,
                 delta_v=0.3, delta_d=1.5, 
@@ -106,7 +109,10 @@ def train_model(model, train_loader, optimizer,
             points, labels = points.to(device), labels.to(device)
             optimizer.zero_grad()
 
-            embeddings = model(points)  # (B, N, emb_dim)
+            # embeddings = model(points)  # (B, N, emb_dim)
+            embeddings, count_pred = model(points)  # new unpack
+            instance_counts = (labels != -1).int().unique(return_counts=True)[1].float()  # actual count per batch
+
             #  Add a Tiny Gaussian Noise to Embeddings
             embeddings = embeddings + torch.randn_like(embeddings) * 0.01
 
@@ -133,6 +139,10 @@ def train_model(model, train_loader, optimizer,
                     loss = lambda_cos * contrastive
                 else:
                     loss = emb_loss + lambda_cos * contrastive
+
+            # === Optional Count Loss ===
+            mse_loss = F.mse_loss(count_pred, instance_counts.to(device))
+            loss = emb_loss + lambda_count * mse_loss
 
             loss.backward()
             optimizer.step()

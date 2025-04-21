@@ -1,4 +1,7 @@
 import torch
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from models.pointnet_unet import PointUNet
 from models.pointnetpp_unet import PointNetPPUNet
 from datasets.lidar_dataset import LiDARPointCloudDataset
