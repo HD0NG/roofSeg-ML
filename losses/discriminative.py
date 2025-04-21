@@ -34,7 +34,7 @@ def discriminative_loss(embeddings, instance_labels, delta_v=0.5, delta_d=1.5,
         cluster_means = []
         l_close = 0.0
         for label in unique_labels:
-            mask = labels == label
+            mask = (labels == label) & (labels != -1)
             if mask.sum() == 0:
                 continue
 

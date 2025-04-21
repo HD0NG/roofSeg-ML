@@ -65,7 +65,8 @@ class LiDARPointCloudDataset(Dataset):
             # Pad with zeros
             pad_size = self.max_points - num_points
             pad_points = np.zeros((pad_size, 3), dtype=np.float64)
-            pad_labels = np.zeros(pad_size, dtype=np.int64)
+            # pad_labels = np.zeros(pad_size, dtype=np.int64)
+            pad_labels = np.full(pad_size, -1, dtype=np.int64)
             points = np.vstack((points, pad_points))
             labels = np.hstack((labels, pad_labels))
 
