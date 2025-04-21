@@ -161,7 +161,9 @@ def train_model(model, train_loader, optimizer,
             model.eval()
             with torch.no_grad():
                 # Run one example (first in batch)
-                example_embed = model(points[0:1]).squeeze(0).cpu().numpy()  # [N, D]
+                # example_embed = model(points[0:1]).squeeze(0).cpu().numpy()  # [N, D]
+                example_embed, _ = model(points[0:1])  # Ignore count
+                example_embed = example_embed.squeeze(0).cpu().numpy()
                 example_embed = normalize_embeddings(example_embed)
                 example_labels = labels[0].cpu().numpy()  # [N]
 
