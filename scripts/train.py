@@ -175,8 +175,23 @@ def train_model(model, train_loader, optimizer,
                 vis_dir = f"model/debug/epoch_{epoch + 1}"
                 os.makedirs(vis_dir, exist_ok=True)
 
-                visualize_embeddings(example_embed, example_labels, f"{vis_dir}/pca_gt.png", title="GT", method="pca")
-                visualize_embeddings(example_embed, example_labels, f"{vis_dir}/tsne_gt.png", title="GT", method="tsne")
+                # visualize_embeddings(example_embed, example_labels, f"{vis_dir}/pca_gt.png", title="GT", method="pca")
+                # visualize_embeddings(example_embed, example_labels, f"{vis_dir}/tsne_gt.png", title="GT", method="tsne")
+                visualize_embeddings(
+                    embeddings=example_embed,
+                    labels=example_labels,
+                    method="pca",
+                    title="PCA-GT",
+                    save_path=f"{vis_dir}/pca_gt.png"
+                )
+
+                visualize_embeddings(
+                    embeddings=example_embed,
+                    labels=example_labels,
+                    method="tsne",
+                    title="TSNE-GT",
+                    save_path=f"{vis_dir}/tsne_gt.png"
+                )
 
                 # --- Centroid Stats ---
                 centroid_stats = compute_centroid_distances(example_embed, example_labels)

@@ -46,7 +46,7 @@ def load_clean_point_cloud(file_path, max_points=512):
 
     return valid_points
 
-def visualize_embeddings(embeddings, labels=None, method='pca', title=None):
+def visualize_embeddings(embeddings, labels=None, method='pca', title=None, save_path=None):
     """
     Visualize 2D projection of embeddings via PCA or t-SNE.
     """
@@ -71,6 +71,8 @@ def visualize_embeddings(embeddings, labels=None, method='pca', title=None):
     plt.axis('off')
     plt.tight_layout()
     plt.show()
+    if save_path:
+        plt.savefig(save_path)
 
 
 def visualize_clusters_plotly(points, labels, title="3D Instance Segmentation"):
