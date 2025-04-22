@@ -1,6 +1,7 @@
 # ignore ALL files in data and results directories
 data/
 results/
+logs/
 .DS_Store
 __pycache__/
 training.config.js

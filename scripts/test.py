@@ -21,7 +21,7 @@ dataloader = DataLoader(
     dataset,
     batch_size=1,                # ← you still want per-scene evaluation
     shuffle=False,
-    num_workers=4,              # Use multiple CPU cores for faster loading
+    num_workers=12,              # Use multiple CPU cores for faster loading
     collate_fn=collate_fn        # ← the one that returns (points, labels, count)
 )
 
@@ -30,11 +30,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "mps")
 model = PointNetPPUNet(emb_dim=128, output_dim=128).to(device)
 
 # Load trained weights
-model.load_state_dict(torch.load("model/PointNetPPUNet_12_n_re.pth", map_location=device))
+model.load_state_dict(torch.load("model/PointNetPPUNet_13_n_re.pth", map_location=device))
 model.eval()  # Set model to evaluation mode
 print("✅ Model loaded successfully!")
 
-output_dir = "test_results/PointNetPPUNet_12_n_re"
+output_dir = "test_results/PointNetPPUNet_13_n_re"
 # Create output directory if it doesn't exist
 os.makedirs(output_dir, exist_ok=True)
 
