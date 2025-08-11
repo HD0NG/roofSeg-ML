@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_cluster import fps, knn_graph
 from torch_scatter import scatter_max
+from utils.positional_encoding import add_positional_encoding
 
 
 class SharedMLP(nn.Sequential):
@@ -101,15 +102,15 @@ class PointNetFeaturePropagation(nn.Module):
 
 
 class PointNetPP(nn.Module):
-    def __init__(self, num_classes=2, input_channels=3):
+    def __init__(self, output_dim=128, input_channels=3):
         super().__init__()
 
         self.sa1 = PointNetSetAbstraction(npoint=1024, radius=0.1, k=32,
-                                          in_channels=input_channels + 3, mlp_channels=[64, 64, 128])
+                                          in_channels=input_channels + 6, mlp_channels=[64, 64, 128]) # 6 for positional encoding
         self.sa2 = PointNetSetAbstraction(npoint=256, radius=0.2, k=32,
-                                          in_channels=128 + 3, mlp_channels=[128, 128, 256])
+                                          in_channels=128 + 6, mlp_channels=[128, 128, 256])
         self.sa3 = PointNetSetAbstraction(npoint=64, radius=0.4, k=32,
-                                          in_channels=256 + 3, mlp_channels=[256, 256, 512])
+                                          in_channels=256 + 6, mlp_channels=[256, 256, 512])
 
         self.fp3 = PointNetFeaturePropagation(512 + 256, [256, 256])
         self.fp2 = PointNetFeaturePropagation(256 + 128, [256, 128])
@@ -118,12 +119,17 @@ class PointNetPP(nn.Module):
         self.classifier = nn.Sequential(
             nn.Conv1d(128, 128, 1),
             nn.BatchNorm1d(128),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Conv1d(128, num_classes, 1)
+            nn.ReLU(inplace=True),
+            nn.Conv1d(128, output_dim, 1)
         )
 
     def forward(self, xyz, features, return_skips=False):
+        # Add positional encoding
+        pe = add_positional_encoding(xyz)  # (B, N, 6)
+        if features is not None:
+            features = torch.cat([features, pe], dim=-1)
+        else:
+            features = pe
         l0_xyz = xyz
         l0_points = features
 
@@ -137,10 +143,12 @@ class PointNetPP(nn.Module):
         fp1 = self.fp2(l1_xyz, l2_xyz, l1_points, fp2)
         fp0 = self.fp1(l0_xyz, l1_xyz, l0_points, fp1)
 
-        out = self.classifier(fp0.transpose(1, 2))  # [B, num_classes, N]
+        # out = self.classifier(fp0.transpose(1, 2))  # [B, num_classes, N]
+        embedding = self.embedding(fp0.transpose(1, 2))  # [B, 128, N]
+        embedding = F.normalize(embedding, p=2, dim=1)    # Normalize along feature dim
 
         if return_skips:
-            return out, {
+            return embedding, {
                 "sa1": l1_points,
                 "sa2": l2_points,
                 "sa3": l3_points,
@@ -149,4 +157,4 @@ class PointNetPP(nn.Module):
                 "fp0": fp0,
             }
 
-        return out
+        return embedding  # [B, 128, N]

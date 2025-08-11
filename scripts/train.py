@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 import numpy as np
 from tqdm import tqdm
 import torch
@@ -14,6 +15,7 @@ from utils.miscellaneous import collate_fn, normalize_embeddings, chamfer_distan
 from datasets.lidar_dataset import LiDARPointCloudDataset
 from models.pointnet_unet import PointUNet
 from models.pointnetpp_unet import PointNetPPUNet
+from models.pointnetpp import PointNetPP
 from losses.discriminative import discriminative_loss
 from losses.contrastive import contrastive_loss, cosine_contrastive_loss
 from utils.visualization import visualize_embeddings, compute_centroid_distances
@@ -37,7 +39,8 @@ train_loader = DataLoader(
 )
 
 # Initialize model & optimizer
-model = PointNetPPUNet(emb_dim=128, output_dim=128)
+# model = PointNetPPUNet(emb_dim=128, output_dim=128)
+model = PointNetPP(output_dim=128)
 # model = PointUNet(emb_dim=128, output_dim=128)
 # recon_head = ReconstructionHead(emb_dim=64)
 
@@ -46,15 +49,15 @@ optimizer = optim.Adam(
     lr=0.001, 
     weight_decay=1e-4)
 
-save_path = "model/PointNetPPUNet_13_n_re.pth"
-num_epochs = 80
+save_path = "model/PointNetPP.pth"
+num_epochs = 50
 
 log_data = {
     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     "save_model_path": save_path,
     "model_params": {
-        "model_type": "PointNetPPUNet",
-        "emb_dim": 128,
+        "model_type": "PointNetPP",
+        "input_dim": 3,  # XYZ coordinates
         "output_dim": 128,
         "num_layers": 4,
         "num_points": train_loader.dataset.max_points,
@@ -111,7 +114,8 @@ def train_model(model, train_loader, optimizer,
             optimizer.zero_grad()
 
             # embeddings = model(points)  # (B, N, emb_dim)
-            embeddings, count_pred = model(points)  # new unpack
+            # embeddings, count_pred = model(points)  # new unpack
+            embeddings = model(points, None)
             # instance_counts = (labels != -1).int().unique(return_counts=True)[1].float()  # actual count per batch
 
             #  Add a Tiny Gaussian Noise to Embeddings
@@ -142,8 +146,8 @@ def train_model(model, train_loader, optimizer,
                     loss = emb_loss + lambda_cos * contrastive
 
             # === Optional Count Loss ===
-            mse_loss = F.mse_loss(count_pred, instance_counts.to(device))
-            loss = emb_loss + lambda_count * mse_loss
+            # mse_loss = F.mse_loss(count_pred, instance_counts.to(device))
+            # loss = emb_loss + lambda_count * mse_loss
 
             loss.backward()
             optimizer.step()
